@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saber 11 - Simulador Avanzado de Matemáticas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: '#1e3a8a', secondary: '#2563eb', accent: '#f59e0b', dark: '#0f172a', light: '#f8fafc' }
+                }
+            }
+        }
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #334155; }
+        .math-table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1rem; background-color: white; font-size: 0.9rem; }
+        .math-table th, .math-table td { border: 1px solid #cbd5e1; padding: 0.75rem; text-align: center; }
+        .math-table th { background-color: #e2e8f0; font-weight: bold; color: #1e293b; }
+        .context-panel { background: #ffffff; border-right: 2px solid #e2e8f0; box-shadow: 2px 0 5px rgba(0,0,0,0.02); }
+        .option-btn { transition: all 0.2s; border: 2px solid #e2e8f0; }
+        .option-btn:hover:not(:disabled) { border-color: #94a3b8; background-color: #f8fafc; }
+        .option-correct { border-color: #22c55e !important; background-color: #f0fdf4 !important; color: #166534; }
+        .option-incorrect { border-color: #ef4444 !important; background-color: #fef2f2 !important; color: #991b1b; }
+        .option-disabled { opacity: 0.5; cursor: not-allowed; }
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-primary text-white p-4 shadow-md flex justify-between items-center z-10 shrink-0">
+        <div class="flex items-center gap-3">
+            <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            <h1 class="text-2xl font-bold tracking-wide">ICFES ProMath</h1>
+        </div>
+        <nav id="main-nav" class="hidden md:flex gap-4">
+            <button onclick="app.goHome()" class="hover:text-accent font-medium transition-colors">Inicio</button>
+            <button onclick="app.showStats()" class="hover:text-accent font-medium transition-colors">Mi Progreso</button>
+        </nav>
+    </header>
+
+    <main id="app-root" class="flex-1 overflow-hidden relative"></main>
+
+    <template id="view-dashboard">
+        <div class="h-full overflow-y-auto p-6 md:p-12 fade-in">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl font-extrabold text-dark mb-4">Preparación Inteligente Saber 11</h2>
+                    <p class="text-lg text-slate-600">Entrenamiento adaptativo con contexto visual persistente y retroalimentación profunda.</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8 mb-12">
+                    <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-8 hover:shadow-xl transition-shadow">
+                        <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
+                            <svg class="w-8 h-8 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-dark mb-3">Simulacro Completo</h3>
+                        <p class="text-slate-600 mb-6">Prueba integral de 50 preguntas respetando la estructura ICFES. Mezcla de temas, evaluación de competencias y análisis de resultados.</p>
+                        <button onclick="app.startQuiz('simulacro', null)" class="w-full bg-secondary hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors">Iniciar Simulacro</button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-8 hover:shadow-xl transition-shadow">
+                        <div class="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <h3 class="text-2xl font-bold text-dark mb-3">Repaso Inteligente</h3>
+                        <p class="text-slate-600 mb-6">El sistema ha guardado <span id="error-count" class="font-bold text-red-600">0</span> preguntas falladas. Reaprende con explicación guiada paso a paso.</p>
+                        <button onclick="app.startQuiz('errores', null)" id="btn-repaso" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Rehacer Errores</button>
+                    </div>
+                </div>
+
+                <h3 class="text-2xl font-bold text-dark mb-6 border-b pb-2">Estudio Específico por Tema</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="themes-container">
+                    </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="view-quiz">
+        <div class="flex flex-col h-full bg-slate-50 fade-in">
+            <div class="bg-white border-b border-slate-200 p-4 flex justify-between items-center shrink-0 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <button onclick="app.goHome()" class="text-slate-500 hover:text-dark font-medium px-3 py-1 bg-slate-100 rounded-md">← Salir</button>
+                    <span class="font-bold text-primary" id="quiz-mode-title">Simulacro</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm font-semibold bg-blue-100 text-blue-800 py-1 px-3 rounded-full" id="quiz-progress-text">Pregunta 1 / 50</span>
+                    <div class="w-32 bg-slate-200 rounded-full h-2.5">
+                        <div id="quiz-progress-bar" class="bg-secondary h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                
+                <div id="context-panel" class="context-panel w-full lg:w-1/2 p-6 overflow-y-auto hidden flex-col justify-start">
+                    <div class="bg-blue-50 text-blue-800 text-xs font-bold uppercase tracking-wider py-1 px-2 rounded inline-block mb-4 w-max">Contexto Visual</div>
+                    <div id="context-content" class="prose prose-slate max-w-none text-slate-700"></div>
+                </div>
+
+                <div id="question-panel" class="w-full lg:w-1/2 p-6 lg:p-10 overflow-y-auto flex flex-col bg-white">
+                    <div class="mb-2 text-sm font-semibold text-slate-400 uppercase tracking-widest" id="q-theme-badge">Tema</div>
+                    <h2 id="q-text" class="text-xl md:text-2xl font-bold text-dark mb-8 leading-relaxed"></h2>
+                    
+                    <div id="q-options" class="flex flex-col gap-3 mb-8"></div>
+
+                    <div id="feedback-panel" class="hidden mt-auto bg-slate-50 border rounded-xl p-6 shadow-sm border-slate-200">
+                        <div class="flex items-start gap-4">
+                            <div id="feedback-icon" class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white"></div>
+                            <div class="flex-1">
+                                <h3 id="feedback-title" class="text-lg font-bold mb-2 text-dark"></h3>
+                                <div id="feedback-body" class="text-slate-700 space-y-3 text-sm md:text-base prose prose-slate"></div>
+                                <div id="feedback-actions" class="mt-6 flex gap-3"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="next-panel" class="hidden mt-8 text-right">
+                        <button onclick="app.nextQuestion()" class="bg-dark hover:bg-slate-800 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-colors">Siguiente Pregunta →</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="view-results">
+        <div class="h-full overflow-y-auto p-6 md:p-12 fade-in bg-slate-50">
+            <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+                <div class="text-center mb-10 border-b pb-8">
+                    <h2 class="text-4xl font-extrabold text-dark mb-2">Análisis de Rendimiento</h2>
+                    <p class="text-slate-500">Resumen detallado de tu sesión de estudio.</p>
+                </div>
+                
+                <div class="grid md:grid-cols-3 gap-6 mb-10">
+                    <div class="bg-blue-50 rounded-xl p-6 text-center border border-blue-100">
+                        <div class="text-4xl font-black text-secondary mb-1" id="res-score">0%</div>
+                        <div class="text-sm font-semibold text-blue-800 uppercase tracking-wider">Precisión Global</div>
+                    </div>
+                    <div class="bg-green-50 rounded-xl p-6 text-center border border-green-100">
+                        <div class="text-4xl font-black text-green-600 mb-1" id="res-correct">0</div>
+                        <div class="text-sm font-semibold text-green-800 uppercase tracking-wider">Aciertos</div>
+                    </div>
+                    <div class="bg-red-50 rounded-xl p-6 text-center border border-red-100">
+                        <div class="text-4xl font-black text-red-600 mb-1" id="res-incorrect">0</div>
+                        <div class="text-sm font-semibold text-red-800 uppercase tracking-wider">Errores a Repasar</div>
+                    </div>
+                </div>
+
+                <div class="mb-10">
+                    <h3 class="text-xl font-bold text-dark mb-4">Desempeño por Temas</h3>
+                    <div id="res-themes" class="space-y-4"></div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="app.startQuiz('errores', null)" id="res-btn-repaso" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors">Repasar Errores Ahora</button>
+                    <button onclick="app.goHome()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-6 rounded-lg shadow-md transition-colors">Volver al Inicio</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        /**
+         * BASE DE DATOS DE PREGUNTAS (SABER 11 MATEMÁTICAS)
+         * Extracción temática, contexto persistente y retroalimentación profunda.
+         */
+        const mathData = [
+            {
+                id: 1,
+                theme: "Estadística y Análisis de Datos",
+                contextId: "c1",
+                contextHtml: `
+                    <div class="mb-4">
+                        <p class="font-bold text-lg mb-2">Información para la pregunta:</p>
+                        <p>Cuatro cursos, cada uno con igual número de estudiantes, presentan anualmente una prueba de matemáticas. La tabla muestra el puntaje promedio obtenido por cada curso.</p>
+                        <table class="math-table">
+                            <tr><th>Curso</th><th>I</th><th>II</th><th>III</th><th>IV</th></tr>
+                            <tr><td>Promedio año anterior</td><td>63</td><td>61</td><td>50</td><td>53</td></tr>
+                            <tr><td>Promedio año actual</td><td>65</td><td>45</td><td>53</td><td>54</td></tr>
+                        </table>
+                    </div>
+                `,
+                text: "Al revisar los puntajes de la tabla, una persona afirma que hubo un aumento en el puntaje respecto al año anterior. Esta afirmación es:",
+                options: [
+                    "A. Correcta, ya que el promedio de la mayoría de los cursos aumentó respecto al año anterior.",
+                    "B. Incorrecta, ya que el promedio total en el año anterior es superior al promedio total en el año actual.",
+                    "C. Correcta, ya que al observar todos los promedios, el mayor corresponde al curso I en el año actual.",
+                    "D. Incorrecta, ya que se necesita el puntaje de cada estudiante para realizar la comparación."
+                ],
+                correct: 1, // B
+                feedback: {
+                    A: "Error de lectura de datos. Aunque los cursos I, III y IV aumentaron ligeramente, el curso II tuvo una caída drástica (de 61 a 45). Afirmar que hubo un 'aumento en el puntaje' global basándose solo en 'la mayoría de cursos' ignora la magnitud matemática de las caídas.",
+                    B: "¡Correcto! Como todos los cursos tienen el mismo número de estudiantes, podemos sumar los promedios para comparar el total. Año anterior: 63+61+50+53 = 227. Año actual: 65+45+53+54 = 217. Como 227 > 217, el puntaje global disminuyó.",
+                    C: "Error lógico. El hecho de que un curso individual (Curso I, 65 puntos) tenga el puntaje más alto no implica que el rendimiento global de todos los cursos haya aumentado.",
+                    D: "Error conceptual. No necesitas los datos individuales. Como el enunciado aclara que los cursos tienen 'igual número de estudiantes', los promedios tienen el mismo peso y pueden sumarse/promediarse directamente para comparar los años."
+                }
+            },
+            {
+                id: 2,
+                theme: "Porcentajes y Proporcionalidad",
+                contextId: null,
+                contextHtml: null,
+                text: "Una persona que vive en Colombia tiene inversiones en dólares en Estados Unidos, y sabe que la tasa de cambio del dólar respecto al peso se mantendrá constante este mes (1 dólar = 4.000 pesos). Su inversión en dólares le dará ganancias del 3%. Un amigo le asegura que en pesos sus ganancias también serán del 3%. ¿La afirmación de su amigo es correcta?",
+                options: [
+                    "A. Sí, porque, sin importar las variaciones en la tasa de cambio, la proporción en que aumenta la inversión en dólares es la misma que en pesos.",
+                    "B. No, porque debería conocerse el valor exacto de la inversión para poder calcular la cantidad de dinero que ganará.",
+                    "C. Sí, porque el 3% representa una proporción fija en cualquiera de las dos monedas, puesto que la tasa de cambio permanecerá constante.",
+                    "D. No, porque el 3% representa un incremento, que será mayor en pesos colombianos, pues en esta moneda cada dólar representa un valor 4.000 veces mayor."
+                ],
+                correct: 2, // C
+                feedback: {
+                    A: "Error de lectura. El enunciado especifica explícitamente que la tasa de cambio 'se mantendrá constante'. Esta opción asume que no importan las variaciones, lo cual es matemáticamente falso (si la tasa variara, el porcentaje de ganancia en pesos sí cambiaría).",
+                    B: "Error conceptual. El porcentaje (3%) es una razón constante. No se necesita saber si invirtió 100 dólares o 1 millón de dólares para confirmar que la *tasa* de crecimiento es del 3%.",
+                    C: "¡Correcto! El porcentaje es una medida de proporción relativa. Si tienes $X$ dólares y ganas el $3\\%$, tienes $1.03X$. Al convertir a pesos con tasa constante ($4000$), tienes $1.03X \\times 4000 = 1.03(4000X)$. Sigue siendo un factor de $1.03$, es decir, el mismo $3\\%$ de ganancia.",
+                    D: "Error conceptual grave. Confundes 'cantidad absoluta' con 'porcentaje'. Es cierto que ganará más *cantidad* de pesos que de dólares, pero el *porcentaje* (la proporción respecto al capital inicial) es exactamente el mismo."
+                }
+            },
+            {
+                id: 3,
+                theme: "Razonamiento Cuantitativo y Optimización",
+                contextId: "c3",
+                contextHtml: `
+                    <div class="mb-4">
+                        <p class="font-bold text-lg mb-2">Viaje al Museo:</p>
+                        <p>Las directivas organizan un viaje con 140 estudiantes divididos en 3 grupos (franjas diferentes). El costo total se asume equitativamente. Se busca que asistan TODOS y paguen el MENOR precio.</p>
+                        <table class="math-table">
+                            <tr><th>Franja</th><th>Horario</th><th>Máx. Estudiantes</th><th>Precio/estudiante</th></tr>
+                            <tr><td>1</td><td>8:00 - 10:00</td><td>50</td><td>$ 35.000</td></tr>
+                            <tr><td>2</td><td>10:00 - 12:00</td><td>40</td><td>$ 40.000</td></tr>
+                            <tr><td>3</td><td>12:00 - 14:00</td><td>30</td><td>$ 50.000</td></tr>
+                            <tr><td>4</td><td>14:00 - 16:00</td><td>60</td><td>$ 45.000</td></tr>
+                        </table>
+                    </div>
+                `,
+                text: "Eligieron las franjas 1, 3 y 4. ¿Esta elección garantiza que asistan todos los estudiantes al menor precio posible?",
+                options: [
+                    "A. Sí, porque esas franjas suman exactamente 140 estudiantes.",
+                    "B. No, porque es posible obtener un precio menor eligiendo la franja 2 en lugar de la franja 3.",
+                    "C. Sí, porque se incluyó la franja 1 que es la de menor precio por estudiante.",
+                    "D. No, porque en la franja 3 la cantidad máxima de estudiantes es 30."
+                ],
+                correct: 1, // B
+                feedback: {
+                    A: "Error de análisis. Aunque las franjas 1(50) + 3(30) + 4(60) suman 140, esto no garantiza el *menor precio*. Hay que analizar los costos.",
+                    B: "¡Correcto! Analicemos la optimización: Para pagar menos, hay que elegir las franjas más baratas. Franja 1 ($35k), Franja 2 ($40k), Franja 4 ($45k). Si eligen 1, 2 y 4: 50+40+60 = 150 cupos (suficiente para 140). Eligieron la franja 3 ($50k) en vez de la 2 ($40k), por lo que están pagando más de lo necesario.",
+                    C: "Error lógico. Incluir la franja más barata (1) es necesario, pero no suficiente. Si el resto de las franjas elegidas son caras (como la 3), el total no será el mínimo posible.",
+                    D: "Error de lectura. El hecho de que la franja 3 permita solo 30 estudiantes no es un impedimento, ya que junto con la 1 y la 4 suman los 140 necesarios. El problema es el *costo*, no la capacidad."
+                }
+            },
+            {
+                id: 4,
+                theme: "Sistemas de Ecuaciones y Modelación",
+                contextId: "c4",
+                contextHtml: `
+                    <div class="mb-4 bg-slate-100 p-4 rounded border-l-4 border-blue-500">
+                        <p class="font-bold text-lg mb-2">RESPONDE LAS PREGUNTAS 4 A 6 DE ACUERDO CON ESTA INFORMACIÓN</p>
+                        <p>Para capacitar en informática a trabajadores, se contrata una institución (ver tabla).</p>
+                        <table class="math-table">
+                            <tr><th>Módulo</th><th>Nombre</th><th>Intensidad</th><th>Valor por hora</th></tr>
+                            <tr><td>I</td><td>Fundamentación</td><td>40 h</td><td>$ 35.000</td></tr>
+                            <tr><td>II</td><td>Procesador de texto</td><td>30 h</td><td>$ 30.000</td></tr>
+                            <tr><td>III</td><td>Hoja de cálculo</td><td>40 h</td><td>$ 40.000</td></tr>
+                            <tr><td>IV</td><td>Presentaciones</td><td>10 h</td><td>$ 45.000</td></tr>
+                        </table>
+                        <p class="text-sm mt-2 text-slate-600"><strong>Regla vital:</strong> La capacitación de cada módulo se hace con cursos de <strong>mínimo 20 y máximo 30 personas</strong> de la misma dependencia.</p>
+                    </div>
+                `,
+                text: "La empresa pagará $ 4.200.000 por capacitar a los trabajadores de 'Insumos' en el módulo I. ¿Cuántos empleados tiene esta dependencia?",
+                options: [
+                    "A. Entre 20 y 30 trabajadores.",
+                    "B. Entre 41 y 60 trabajadores.",
+                    "C. Entre 61 y 90 trabajadores.",
+                    "D. Entre 80 y 120 trabajadores."
+                ],
+                correct: 2, // C
+                feedback: {
+                    A: "Error de cálculo. Si hubiera 1 solo curso (20-30 personas), el costo sería 1 curso × 40h × $35.000 = $1.400.000. Pero pagaron $4.200.000.",
+                    B: "Error de proporción. 41 a 60 trabajadores requerirían 2 cursos (ej. 2 de 30). El costo de 2 cursos es 2 × $1.400.000 = $2.800.000.",
+                    C: "¡Correcto! Paso 1: Costo de 1 curso del Módulo I = 40 horas × $35.000 = $1.400.000. Paso 2: Si pagaron $4.200.000, entonces contrataron $4.200.000 / $1.400.000 = 3 cursos. Paso 3: Como cada curso tiene entre 20 y 30 personas, 3 cursos tendrán entre $3 \\times 20 = 60$ (en realidad dice más de 60, o sea 61 para abrir el tercero) y $3 \\times 30 = 90$ trabajadores.",
+                    D: "Error. Esto requeriría 4 cursos ($5.600.000)."
+                }
+            },
+            {
+                id: 5,
+                theme: "Sistemas de Ecuaciones y Modelación",
+                contextId: "c4",
+                contextHtml: null, // Hereda el contexto c4
+                text: "Si se les cobrara a los 50 trabajadores de la dependencia 'Recursos Humanos' la capacitación del módulo II, y todos pagaran el mismo valor, ¿cuánto debería pagar cada uno?",
+                options: [
+                    "A. $ 18.000",
+                    "B. $ 36.000",
+                    "C. $ 450.000",
+                    "D. $ 900.000"
+                ],
+                correct: 1, // B
+                feedback: {
+                    A: "Error de cálculo. $18.000 es el resultado de dividir el costo de UN solo curso ($900.000) entre los 50 trabajadores. Pero con 50 trabajadores, se requieren obligatoriamente DOS cursos por la regla de 'máximo 30 personas' por curso.",
+                    B: "¡Correcto! Paso 1: 50 trabajadores exigen abrir 2 cursos (ej. uno de 25 y otro de 25). Paso 2: Costo del módulo II para 1 curso = 30 horas × $30.000 = $900.000. Paso 3: Costo para 2 cursos = $1.800.000. Paso 4: Dividimos el total entre los 50 trabajadores: $1.800.000 / 50 = $36.000 cada uno.",
+                    C: "Error de lectura. Este valor asume un cálculo irracional de multiplicar en lugar de dividir costos.",
+                    D: "Error conceptual. $900.000 es el costo total de UN solo curso. Ni cubre a todos los trabajadores, ni es lo que pagaría *cada uno*."
+                }
+            },
+            {
+                id: 6,
+                theme: "Sistemas de Ecuaciones y Modelación",
+                contextId: "c4",
+                contextHtml: null, // Hereda el contexto c4
+                text: "La empresa paga $ 900.000 por la capacitación de los 40 funcionarios de 'Importaciones'. De acuerdo con el valor pagado, ¿cuál de los siguientes módulos corresponde al tomado?",
+                options: [
+                    "A. I.",
+                    "B. II.",
+                    "C. III.",
+                    "D. IV."
+                ],
+                correct: 3, // D
+                feedback: {
+                    A: "Error. 40 funcionarios requieren 2 cursos. Costo módulo I para 2 cursos = 2 × (40 × 35.000) = $2.800.000. No concuerda con $900.000.",
+                    B: "Error. Costo módulo II para 2 cursos = 2 × (30 × 30.000) = $1.800.000. No concuerda.",
+                    C: "Error. Costo módulo III para 2 cursos = 2 × (40 × 40.000) = $3.200.000.",
+                    D: "¡Correcto! 40 funcionarios exigen 2 cursos. Si pagaron $900.000 en total, cada curso costó $450.000. Evaluemos el módulo IV: 10 horas × $45.000 = $450.000 por curso. ¡Concuerda exactamente!"
+                }
+            },
+            {
+                id: 7,
+                theme: "Geometría Semejanza y Proporcionalidad",
+                contextId: "c7",
+                contextHtml: `
+                    <div class="mb-4">
+                        <p class="font-bold">El Portalápices de Eliécer</p>
+                        <p>Eliécer tiene un portalápices de base y boca cuadrada. Un caucho en la base mide 18 cm de perímetro. Al subirlo a la boca, se estira a 24 cm. La relación de los perímetros es $\\frac{18}{24} = \\frac{3}{4}$.</p>
+                        <p class="italic text-slate-600">Eliécer afirma: "Como los perímetros están en relación 3/4, el área de la base debe ser también tres cuartas partes del área de la boca".</p>
+                    </div>
+                `,
+                text: "¿Es verdadera esta afirmación?",
+                options: [
+                    "A. No, porque la medición se realiza con el mismo caucho y las áreas deben ser iguales.",
+                    "B. Sí, porque el caucho se estira dependiendo del área que encierre.",
+                    "C. No, porque la relación se cumple para las longitudes, pero al calcular las áreas, la razón se eleva al cuadrado.",
+                    "D. Sí, porque como las figuras son semejantes, todas sus medidas tienen la misma razón."
+                ],
+                correct: 2, // C
+                feedback: {
+                    A: "Error de razonamiento. El caucho se estira físicamente, por ende el perímetro cambia y el área encerrada inevitablemente cambia.",
+                    B: "Error matemático. Si el perímetro crece en una proporción $K$, el área no crece en esa misma proporción lineal $K$, crece bidimensionalmente.",
+                    C: "¡Correcto! Esta es una regla fundamental de geometría para figuras semejantes (cuadrados en este caso). Si la razón de semejanza lineal (perímetros o lados) es $r = \\frac{3}{4}$, la razón de las áreas es $r^2 = (\\frac{3}{4})^2 = \\frac{9}{16}$, lo cual es diferente de $\\frac{3}{4}$. Por lo tanto, Eliécer se equivoca.",
+                    D: "Error conceptual. Las medidas *lineales* (lados, alturas, perímetros) comparten la misma razón $r$. Las medidas *superficiales* (áreas) tienen razón $r^2$. Las *volumétricas* $r^3$."
+                }
+            },
+            {
+                id: 19,
+                theme: "Álgebra y Ecuaciones Lineales",
+                contextId: "c19",
+                contextHtml: `
+                    <div class="mb-4 bg-yellow-50 p-4 border border-yellow-200 rounded">
+                        <p>En una feria, el robot P y el robot Q disputan tenis de mesa. El marcador va <strong>7 a 2 a favor de P</strong>.</p>
+                        <p>Se reprograman: Por cada 2 puntos que anota P, Q anota 3 puntos.</p>
+                    </div>
+                `,
+                text: "¿Cuál de las siguientes ecuaciones permite determinar cuándo igualará en puntos el robot Q al robot P?",
+                options: [
+                    "A. $\\frac{3}{2}x = 0$ (Donde x es la cantidad de puntos que anotará P).",
+                    "B. $7 + x = \\frac{3}{2}x + 2$ (Donde x es la cantidad de puntos que anotará P).",
+                    "C. $7 + 3x = 2 + 2y$ (Donde x anota P, y anota Q).",
+                    "D. $x + y = 7 + 2$ (Donde x anota P, y anota Q)."
+                ],
+                correct: 1, // B
+                feedback: {
+                    A: "Error. Esta ecuación no incluye los puntos iniciales (7 y 2) y asume un resultado igual a 0, lo cual no representa el problema.",
+                    B: "¡Correcto! Puntaje actual de P = 7. Puntaje de Q = 2. Si P anota $x$ puntos adicionales, su total será $7 + x$. Como Q anota 3 por cada 2 de P, la relación es $1.5$ a $1$. Es decir, Q anota $\\frac{3}{2}x$ puntos. El total de Q será $2 + \\frac{3}{2}x$. Para que igualen, igualamos los totales: $7 + x = 2 + \\frac{3}{2}x$.",
+                    C: "Error en la formulación. Las variables se cruzan de manera incorrecta y no respeta la razón de cambio entre los dos robots.",
+                    D: "Error lógico. Esta es la suma de los puntos a realizar igualada a la suma de los puntos actuales, no es una ecuación de igualación de marcadores."
+                }
+            },
+            {
+                id: 28,
+                theme: "Probabilidad Básica",
+                contextId: "c28",
+                contextHtml: `
+                    <div class="mb-4">
+                        <table class="math-table">
+                            <tr><th></th><th>Curso 11A</th><th>Curso 11B</th><th>Total</th></tr>
+                            <tr><td>Mujeres</td><td>22</td><td>23</td><td>45</td></tr>
+                            <tr><td>Hombres</td><td>18</td><td>12</td><td>30</td></tr>
+                            <tr><td>Total</td><td>40</td><td>35</td><td>75</td></tr>
+                        </table>
+                    </div>
+                `,
+                text: "La probabilidad de escoger un estudiante de grado undécimo que sea mujer es de 3/5. Si se sabe que uno de los valores de esta razón es el número total de mujeres, ¿Cuál es el otro valor?",
+                options: [
+                    "A. El número total de estudiantes de grado undécimo.",
+                    "B. El número total de hombres de grado undécimo.",
+                    "C. El número total de mujeres del curso 11 B.",
+                    "D. El número total de hombres del curso 11 A."
+                ],
+                correct: 0, // A
+                feedback: {
+                    A: "¡Correcto! La probabilidad clásica se define como $\\frac{\\text{Casos Favorables}}{\\text{Casos Totales}}$. La tabla muestra 45 mujeres en total y 75 estudiantes en total. $P = \\frac{45}{75}$. Al simplificar dividiendo entre 15, obtenemos $\\frac{3}{5}$. Por lo tanto, el denominador de la razón original sin simplificar es 75, que corresponde a TODOS los estudiantes de undécimo.",
+                    B: "Error. El total de hombres es 30. La probabilidad no se calcula dividiendo mujeres entre hombres, eso sería una razón de género, no una probabilidad de selección del universo.",
+                    C: "Error. No estamos restringiendo el espacio muestral solo al curso 11 B. El enunciado dice 'estudiante de grado undécimo' (ambos cursos).",
+                    D: "Error. Mezcla categorías sin sentido probabilístico para esta pregunta."
+                }
+            },
+            {
+                id: 31,
+                theme: "Álgebra y Ecuaciones Cuadráticas",
+                contextId: "c31",
+                contextHtml: `
+                    <div class="mb-4 text-sm bg-white p-4 border rounded">
+                        <p class="font-bold mb-2">Ecuación: $(x + 2)(x + 3) = 5(x + 3)$</p>
+                        <p><strong>María:</strong> Cancela/multiplica: $x^2+5x+6 = 5x+15 \\Rightarrow x^2 = 9 \\Rightarrow x = \\pm 3$</p>
+                        <p><strong>Nelson:</strong> Factoriza: $(x+3)[(x+2)-5] = 0 \\Rightarrow (x+3)(x-3) = 0 \\Rightarrow x^2=9 \\Rightarrow x = \\pm 3$</p>
+                        <p><strong>Óscar:</strong> Suma errónea: $x+2+x+3 = 5+x+3 \\Rightarrow 2x+5 = x+8 \\Rightarrow x = 3$</p>
+                    </div>
+                `,
+                text: "¿Cuál(es) estudiante(s) desarrolló(aron) un procedimiento correcto?",
+                options: [
+                    "A. Solo Nelson y Óscar.",
+                    "B. Solo María y Nelson.",
+                    "C. Solamente Óscar.",
+                    "D. Solamente María."
+                ],
+                correct: 1, // B
+                feedback: {
+                    A: "Error. El procedimiento de Óscar es fatalmente incorrecto algebraicamente. Cambió la multiplicación de factores $(x+2)(x+3)$ por una suma $x+2+x+3$.",
+                    B: "¡Correcto! María aplicó la propiedad distributiva a ambos lados correctamente, simplificó términos semejantes y extrajo raíz cuadrada. Nelson usó una estrategia más elegante: pasó todo a un lado, factorizó el término común $(x+3)$, aplicó el teorema del factor nulo y resolvió correctamente. Ambos procedimientos son válidos y llegan a la solución correcta.",
+                    C: "Error. Óscar rompió las reglas básicas de las operaciones algebraicas.",
+                    D: "Error por exclusión. Aunque María está en lo correcto, Nelson también desarrolló un procedimiento matemáticamente impecable."
+                }
+            }
+        ];
+
+        /**
+         * LÓGICA DE LA APLICACIÓN
+         */
+        const app = {
+            state: {
+                currentMode: null, // 'simulacro' | 'tema' | 'errores'
+                currentTheme: null,
+                questions: [],
+                currentIndex: 0,
+                stats: { correct: 0, incorrect: 0, history: [] },
+                errorsDB: JSON.parse(localStorage.getItem('icfes_errors')) || {},
+                hasFailedCurrent: false
+            },
+
+            init() {
+                this.renderMenu();
+            },
+
+            goHome() {
+                this.renderMenu();
+            },
+
+            saveErrors() {
+                localStorage.setItem('icfes_errors', JSON.stringify(this.state.errorsDB));
+            },
+
+            extractThemes() {
+                const themes = new Set();
+                mathData.forEach(q => themes.add(q.theme));
+                return Array.from(themes);
+            },
+
+            // --- RENDERIZADO DE VISTAS ---
+            
+            renderMenu() {
+                const root = document.getElementById('app-root');
+                const template = document.getElementById('view-dashboard').content.cloneNode(true);
+                root.innerHTML = '';
+                root.appendChild(template);
+
+                // Update Error count
+                const errorCount = Object.keys(this.state.errorsDB).length;
+                document.getElementById('error-count').textContent = errorCount;
+                if(errorCount === 0) document.getElementById('btn-repaso').disabled = true;
+
+                // Populate Themes
+                const themesContainer = document.getElementById('themes-container');
+                const themes = this.extractThemes();
+                themes.forEach(theme => {
+                    const btn = document.createElement('button');
+                    btn.className = "bg-white border border-slate-200 p-6 rounded-xl shadow-sm hover:shadow-md hover:border-secondary transition-all text-left group";
+                    btn.innerHTML = `
+                        <h4 class="font-bold text-dark group-hover:text-secondary mb-2">${theme}</h4>
+                        <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded">Practicar →</span>
+                    `;
+                    btn.onclick = () => this.startQuiz('tema', theme);
+                    themesContainer.appendChild(btn);
+                });
+            },
+
+            showStats() {
+                // To keep within single file size, we map the results view immediately
+                this.renderResults(true);
+            },
+
+            // --- CONTROL DEL QUIZ ---
+
+            startQuiz(mode, theme) {
+                this.state.currentMode = mode;
+                this.state.currentTheme = theme;
+                this.state.currentIndex = 0;
+                this.state.stats = { correct: 0, incorrect: 0, history: [] };
+
+                if (mode === 'simulacro') {
+                    this.state.questions = [...mathData].sort(() => 0.5 - Math.random()); // Shuffle for real feel
+                } else if (mode === 'tema') {
+                    this.state.questions = mathData.filter(q => q.theme === theme);
+                } else if (mode === 'errores') {
+                    const errorIds = Object.keys(this.state.errorsDB).map(Number);
+                    this.state.questions = mathData.filter(q => errorIds.includes(q.id));
+                }
+
+                if(this.state.questions.length === 0) {
+                    alert("No hay preguntas disponibles para esta selección.");
+                    return;
+                }
+
+                const root = document.getElementById('app-root');
+                const template = document.getElementById('view-quiz').content.cloneNode(true);
+                root.innerHTML = '';
+                root.appendChild(template);
+
+                document.getElementById('quiz-mode-title').textContent = 
+                    mode === 'simulacro' ? 'Simulacro Completo' : 
+                    mode === 'tema' ? `Estudio: ${theme}` : 'Repaso de Errores';
+
+                this.renderQuestion();
+            },
+
+            renderQuestion() {
+                const q = this.state.questions[this.state.currentIndex];
+                this.state.hasFailedCurrent = false;
+
+                // Update UI
+                document.getElementById('quiz-progress-text').textContent = `Pregunta ${this.state.currentIndex + 1} de ${this.state.questions.length}`;
+                document.getElementById('quiz-progress-bar').style.width = `${((this.state.currentIndex) / this.state.questions.length) * 100}%`;
+                document.getElementById('q-theme-badge').textContent = q.theme;
+                document.getElementById('q-text').innerHTML = `${this.state.currentIndex + 1}. ${q.text}`;
+
+                // Persistent Context Engine
+                const contextPanel = document.getElementById('context-panel');
+                const questionPanel = document.getElementById('question-panel');
+                
+                if (q.contextHtml) {
+                    document.getElementById('context-content').innerHTML = q.contextHtml;
+                    contextPanel.classList.remove('hidden');
+                    contextPanel.classList.add('flex');
+                    // In real desktop, panel takes 50%
+                } else {
+                    // Hide context if NOT shared. Check if previous had same context.
+                    const prevQ = this.state.questions[this.state.currentIndex - 1];
+                    if (!prevQ || prevQ.contextId !== q.contextId || q.contextId === null) {
+                        contextPanel.classList.add('hidden');
+                        contextPanel.classList.remove('flex');
+                    }
+                }
+
+                // Render Options
+                const optionsContainer = document.getElementById('q-options');
+                optionsContainer.innerHTML = '';
+                q.options.forEach((optText, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = "option-btn w-full text-left p-4 rounded-xl font-medium text-slate-700 hover:text-dark focus:outline-none flex gap-3";
+                    btn.innerHTML = `<span class="font-bold text-slate-400 w-6 shrink-0">${['A','B','C','D'][index]}.</span> <span>${optText.substring(3)}</span>`;
+                    btn.onclick = () => this.handleAnswer(index, btn);
+                    btn.dataset.idx = index;
+                    optionsContainer.appendChild(btn);
+                });
+
+                // Reset Feedback Area
+                document.getElementById('feedback-panel').classList.add('hidden');
+                document.getElementById('next-panel').classList.add('hidden');
+
+                // Render MathJax
+                if (window.MathJax) MathJax.typesetPromise();
+            },
+
+            handleAnswer(selectedIndex, btnElement) {
+                const q = this.state.questions[this.state.currentIndex];
+                const isCorrect = selectedIndex === q.correct;
+                const optionsContainer = document.getElementById('q-options');
+                const allButtons = optionsContainer.querySelectorAll('button');
+
+                // Track Stats (Only on first try)
+                if (!this.state.hasFailedCurrent) {
+                    if (isCorrect) {
+                        this.state.stats.correct++;
+                        // Remove from errors if it was there
+                        delete this.state.errorsDB[q.id];
+                    } else {
+                        this.state.stats.incorrect++;
+                        // Add to errors
+                        this.state.errorsDB[q.id] = { theme: q.theme, failedDate: new Date() };
+                    }
+                    this.state.stats.history.push({ qId: q.id, theme: q.theme, correct: isCorrect });
+                    this.saveErrors();
+                }
+
+                if (isCorrect) {
+                    // Disable all
+                    allButtons.forEach(b => {
+                        b.disabled = true;
+                        b.classList.add('option-disabled');
+                    });
+                    btnElement.classList.remove('option-disabled');
+                    btnElement.classList.add('option-correct');
+                    this.showFullFeedback(q, selectedIndex);
+                } else {
+                    this.state.hasFailedCurrent = true;
+                    btnElement.classList.add('option-incorrect');
+                    btnElement.disabled = true;
+                    this.showGuidedFeedback(q, selectedIndex);
+                }
+            },
+
+            showGuidedFeedback(q, selectedIndex) {
+                const panel = document.getElementById('feedback-panel');
+                panel.classList.remove('hidden', 'bg-green-50', 'border-green-200');
+                panel.classList.add('bg-red-50', 'border-red-200');
+                
+                const letters = ['A','B','C','D'];
+                document.getElementById('feedback-icon').className = "shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white bg-red-500 font-bold text-xl";
+                document.getElementById('feedback-icon').textContent = "×";
+                document.getElementById('feedback-title').textContent = "Respuesta Incorrecta. Analicemos el error:";
+                document.getElementById('feedback-title').className = "text-lg font-bold mb-2 text-red-800";
+                
+                // Fetch specific error
+                const explanation = q.feedback[letters[selectedIndex]];
+                
+                document.getElementById('feedback-body').innerHTML = `
+                    <p class="text-red-900">${explanation}</p>
+                    <div class="mt-4 p-3 bg-white border border-red-100 rounded text-slate-700 font-medium">
+                        💡 <strong>Reaprendizaje Guiado:</strong> Lee nuevamente el contexto o la fórmula, identifica el error señalado y vuelve a intentarlo.
+                    </div>
+                `;
+
+                document.getElementById('feedback-actions').innerHTML = ''; // Limpiar botones extra
+                document.getElementById('next-panel').classList.add('hidden'); // No next yet
+                if (window.MathJax) MathJax.typesetPromise();
+            },
+
+            showFullFeedback(q, correctIndex) {
+                const panel = document.getElementById('feedback-panel');
+                panel.classList.remove('hidden', 'bg-red-50', 'border-red-200');
+                panel.classList.add('bg-green-50', 'border-green-200');
+                
+                const letters = ['A','B','C','D'];
+                document.getElementById('feedback-icon').className = "shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white bg-green-500 font-bold text-xl";
+                document.getElementById('feedback-icon').textContent = "✓";
+                
+                document.getElementById('feedback-title').textContent = this.state.hasFailedCurrent ? "¡Exacto! Lograste corregirlo." : "¡Excelente! Respuesta Correcta.";
+                document.getElementById('feedback-title').className = "text-lg font-bold mb-4 text-green-800";
+
+                // Build exhaustive feedback
+                let html = `<div class="space-y-4">`;
+                
+                // Why correct
+                html += `
+                    <div class="p-4 bg-white border-l-4 border-green-500 rounded shadow-sm">
+                        <h4 class="font-bold text-green-700 mb-1">¿Por qué la ${letters[correctIndex]} es CORRECTA?</h4>
+                        <p>${q.feedback[letters[correctIndex]]}</p>
+                    </div>
+                    <h4 class="font-bold text-slate-600 mt-4 border-b pb-2">Descarte de las demás opciones:</h4>
+                    <ul class="space-y-3">
+                `;
+
+                // Why others wrong
+                letters.forEach((letter, idx) => {
+                    if (idx !== correctIndex) {
+                        html += `
+                        <li class="bg-white p-3 rounded border border-slate-100">
+                            <span class="font-bold text-red-600">Opción ${letter}</span> → <span class="text-slate-600">${q.feedback[letter]}</span>
+                        </li>`;
+                    }
+                });
+                html += `</ul></div>`;
+
+                document.getElementById('feedback-body').innerHTML = html;
+                document.getElementById('feedback-actions').innerHTML = '';
+                document.getElementById('next-panel').classList.remove('hidden');
+                
+                if (window.MathJax) MathJax.typesetPromise();
+            },
+
+            nextQuestion() {
+                if (this.state.currentIndex < this.state.questions.length - 1) {
+                    this.state.currentIndex++;
+                    this.renderQuestion();
+                } else {
+                    this.renderResults();
+                }
+            },
+
+            // --- RESULTADOS ---
+
+            renderResults(isGlobalStats = false) {
+                const root = document.getElementById('app-root');
+                const template = document.getElementById('view-results').content.cloneNode(true);
+                root.innerHTML = '';
+                root.appendChild(template);
+
+                let total = 0, correct = 0, incorrect = 0;
+                let themeAnalysis = {};
+
+                if (isGlobalStats) {
+                    // Global logic based on errors DB
+                    total = Object.keys(this.state.errorsDB).length; // Simplify for demo
+                    document.querySelector('h2').textContent = "Historial Global";
+                    document.querySelector('p').textContent = "Resumen de debilidades y temas a mejorar.";
+                    
+                    // Group errors by theme
+                    Object.values(this.state.errorsDB).forEach(err => {
+                        themeAnalysis[err.theme] = (themeAnalysis[err.theme] || 0) + 1;
+                        incorrect++;
+                    });
+                    
+                    document.getElementById('res-score').textContent = "N/A";
+                    document.getElementById('res-correct').textContent = "-";
+                    document.getElementById('res-incorrect').textContent = incorrect;
+                } else {
+                    // Session logic
+                    total = this.state.stats.history.length;
+                    correct = this.state.stats.correct;
+                    incorrect = this.state.stats.incorrect;
+                    const pct = total === 0 ? 0 : Math.round((correct / total) * 100);
+                    
+                    document.getElementById('res-score').textContent = `${pct}%`;
+                    document.getElementById('res-correct').textContent = correct;
+                    document.getElementById('res-incorrect').textContent = incorrect;
+
+                    // Theme breakdown
+                    this.state.stats.history.forEach(h => {
+                        if(!themeAnalysis[h.theme]) themeAnalysis[h.theme] = { total:0, err:0 };
+                        themeAnalysis[h.theme].total++;
+                        if(!h.correct) themeAnalysis[h.theme].err++;
+                    });
+                }
+
+                // Render Themes Analysis
+                const themesHtml = document.getElementById('res-themes');
+                if (Object.keys(themeAnalysis).length === 0) {
+                    themesHtml.innerHTML = "<p class='text-slate-500'>No hay datos suficientes para análisis temático.</p>";
+                } else {
+                    for (const [theme, data] of Object.entries(themeAnalysis)) {
+                        const errCount = isGlobalStats ? data : data.err;
+                        if (errCount > 0 || !isGlobalStats) {
+                            themesHtml.innerHTML += `
+                                <div class="bg-slate-50 border border-slate-200 p-4 rounded-lg flex justify-between items-center">
+                                    <div class="font-medium text-dark">${theme}</div>
+                                    <div class="text-sm font-bold ${errCount > 0 ? 'text-red-600 bg-red-100' : 'text-green-600 bg-green-100'} px-3 py-1 rounded">
+                                        ${errCount} Errores
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+
+                if (incorrect === 0) {
+                    document.getElementById('res-btn-repaso').classList.add('hidden');
+                }
+            }
+        };
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
